@@ -129,6 +129,14 @@ int tamanho_registro_is;
 
  /*******************************************************/
 
+void gerarChave(Produto *p);
+
+ /* Realiza os scanfs na struct Produto */
+ void ler_entrada(char* registro, Produto *novo);
+
+ /* Insere produto novo no arquivo de dados */
+ void inserir_arquivo(Produto *novo);
+
  /* Recebe do usuário uma string simulando o arquivo completo e retorna o número
   * de registros. */
  int carregar_arquivo();
@@ -136,22 +144,22 @@ int tamanho_registro_is;
 /* (Re)faz o Cria iprimary*/
 void criar_iprimary(Indice *iprimary);
 
-/* (Re)faz o índice de jogos  */
-void criar_ibrand(Indice *ibrand) ;
+/* (Re)faz o índice de produtos  */
+void criar_ibrand(Indice *ibrand);
 
-/*Escreve um nó da árvore no arquivo de índice,
-* O terceiro parametro serve para informar qual indice se trata */
-void write_btree(void *salvar, int rrn, char ip);
-
-/*Lê um nó do arquivo de índice e retorna na estrutura*/
-void *read_btree(int rrn, char ip);
-
-/* Aloca um nó de árvore para ser utilizado em memória primária, o primeiro parametro serve para informar que árvore se trata
-* É conveniente que essa função também inicialize os campos necessários com valores nulos*/
-void *criar_no(char ip);
-
-/*Libera todos os campos dinâmicos do nó, inclusive ele mesmo*/
-void libera_no(void *node, char ip);
+// /*Escreve um nó da árvore no arquivo de índice,
+// * O terceiro parametro serve para informar qual indice se trata */
+// void write_btree(void *salvar, int rrn, char ip);
+//
+// /*Lê um nó do arquivo de índice e retorna na estrutura*/
+// void *read_btree(int rrn, char ip);
+//
+// /* Aloca um nó de árvore para ser utilizado em memória primária, o primeiro parametro serve para informar que árvore se trata
+// * É conveniente que essa função também inicialize os campos necessários com valores nulos*/
+// void *criar_no(char ip);
+//
+// /*Libera todos os campos dinâmicos do nó, inclusive ele mesmo*/
+// void libera_no(void *node, char ip);
 
 /*
 *   Caro aluno,
@@ -163,17 +171,35 @@ void libera_no(void *node, char ip);
 *   void write_btree_is(node_Btree_is *salvar, int rrn) e node_Btree_is *read_btree_is(int rrn).
 */
 
-/* Atualiza os dois índices com o novo registro inserido */
-void inserir_registro_indices(Indice *iprimary, Indice *ibrand, Jogo j);
+/*Escreve um nó da árvore no arquivo de índice*/
+void write_btree_ip(node_Btree_ip *salvar, int rrn);
+void write_btree_is(node_Btree_is *salvar, int rrn);
 
-/* Exibe o jogo */
+/*Lê um nó do arquivo de índice e retorna na estrutura*/
+node_Btree_ip *read_btree_ip(int rrn),
+node_Btree_is *read_btree_is(int rrn);
+
+/* Aloca um nó de árvore para ser utilizado em memória primária, o primeiro parametro serve para informar que árvore se trata
+* É conveniente que essa função também inicialize os campos necessários com valores nulos*/
+node_Btree_ip *criar_no_ip();
+node_Btree_is *criar_no_is();
+
+/*Libera todos os campos dinâmicos do nó, inclusive ele mesmo*/
+void libera_no(void *node, char ip);
+
+
+/* Atualiza os dois índices com o novo registro inserido */
+void inserir_registro_indices(Indice *iprimary, Indice *ibrand, Produto j);
+
+/* Exibe o produto */
 int exibir_registro(int rrn);
 
 int main()
 {
 	char *p; /* # */
   /* Arquivo */
-	int carregarArquivo = 0; nregistros = 0, nregistrosip = 0, nregistrosis = 0;
+	int carregarArquivo = 0;
+	nregistros = 0; nregistrosip = 0; nregistrosis = 0;
 	scanf("%d\n", &carregarArquivo); /* 1 (sim) | 0 (nao) */
 	if (carregarArquivo)
 		nregistros = carregar_arquivo();
@@ -181,10 +207,10 @@ int main()
 	scanf("%d %d%*c", &ordem_ip, &ordem_is);
 
 	tamanho_registro_ip = ordem_ip*3 + 4 + (-1 + ordem_ip)*14;
-	tamanho_registro_is = ordem_is*3 + 4 + (-1 + ordem_is)* (	TAM_STRING_INDICE +9);
+	tamanho_registro_is = ordem_is*3 + 4 + (-1 + ordem_is)* (TAM_STRING_INDICE +9);
 
 	/* Índice primário */
-	Indice iprimary ;
+	Indice iprimary;
 	criar_iprimary(&iprimary);
 
 	/* Índice secundário de nomes dos Produtos */
@@ -255,6 +281,126 @@ int main()
 /* ==========================================================================
  * ================================= FUNÇÕES ================================
  * ========================================================================== */
+
+/* (Re)faz o Cria iprimary*/
+void criar_iprimary(Indice *iprimary) {
+	 if(!nregistros)
+	 	return;
+}
+
+/* (Re)faz o índice de produtos  */
+void criar_ibrand(Indice *ibrand) {
+	 if(!nregistros)
+	 	return;
+}
+
+node_Btree_ip *criar_no_ip() {
+	node_Btree_ip *no_ip;
+	no_ip->num_chaves = 0;
+	no_ip->chave = (Chave_ip *) malloc ((ordem_ip - 1) * sizeof(Chave_ip));
+	no_ip->desc = (int *) malloc ((ordem_ip) * sizeof(int));
+	no_ip->folha = 'N';
+	return no_ip;
+}
+
+node_Btree_is *criar_no_is() {
+	node_Btree_is *no_is;
+	no_is->num_chaves = 0;
+	no_is->chave = (Chave_is *) malloc ((ordem_is - 1) * sizeof(Chave_is));
+	no_is->desc = (int *) malloc ((ordem_is) * sizeof(int));
+	no_is->folha = 'N';
+	return no_is;
+}
+
+/********************FUNÇÕES DO MENU*********************/
+void cadastrar(Indice* iprimary, Indice* ibrand) {
+	char registro[TAM_NOME];
+	Produto produto_aux;
+
+	ler_entrada(registro, &produto_aux);
+	inserir_arquivo(&produto_aux, nregistros);
+
+	node_Btree_ip *no_ip = criar_no_ip();
+
+}
+
+int alterar(Indice iprimary) {
+	 return 0;
+}
+
+void buscar(Indice iprimary,Indice ibrand) {
+	 return;
+}
+
+void listar(Indice iprimary,Indice ibrand) {
+	 return;
+}
+/********************************************************/
+
+
+/*************FUNÇÕES REAPROVEITADAS DO T01**************/
+
+void gerarChave(Produto *p) {
+	p->pk[0] = toupper(p->nome[0]);
+	p->pk[1] = toupper(p->nome[1]);
+	p->pk[2] = toupper(p->marca[0]);
+	p->pk[3] = toupper(p->marca[1]);
+	p->pk[4] = p->data[0];
+	p->pk[5] = p->data[1];
+	p->pk[6] = p->data[3];
+	p->pk[7] = p->data[4];
+	p->pk[8] = p->ano[0];
+	p->pk[9] = p->ano[1];
+	p->pk[10] = '\0';
+}
+
+/* Realiza os scanfs na struct Produto */
+void ler_entrada(char* registro, Produto *novo) {
+ 	scanf("%[^\n]%*c", registro);
+ 	strcpy(novo->nome, registro);
+
+ 	scanf("%[^\n]%*c", registro);
+ 	strcpy(novo->marca, registro);
+
+ 	scanf("%[^\n]%*c", registro);
+ 	strcpy(novo->data, registro);
+
+ 	scanf("%[^\n]%*c", registro);
+ 	strcpy(novo->ano, registro);
+
+ 	scanf("%[^\n]%*c", registro);
+ 	strcpy(novo->preco, registro);
+
+ 	scanf("%[^\n]%*c", registro);
+ 	strcpy(novo->desconto, registro);
+
+ 	scanf("%[^\n]%*c", registro);
+ 	strcpy(novo->categoria, registro);
+
+ 	gerarChave(novo);
+}
+
+/* Insere produto novo no arquivo de dados */
+void inserir_arquivo(Produto *novo) {
+	char temp[TAM_REGISTRO + 1];
+
+	sprintf(temp, "%s@%s@%s@%s@%s@%s@%s@",	p->nome, p->marca,
+											p->data, p->ano,
+											p->preco, p->desconto,
+											p->categoria);
+
+	temp[192] = '\0';
+
+	int size = strlen(temp);
+	size =  192 - size;
+	for( int i = 0 ; i < size ; i++ )
+		strcat(temp, "#");
+
+	strcat(ARQUIVO, temp);
+}
+
+/********************************************************/
+
 
 /* Recebe do usuário uma string simulando o arquivo completo e retorna o número
  * de registros. */

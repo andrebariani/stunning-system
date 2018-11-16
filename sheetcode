@@ -1,0 +1,3 @@
+commands:
+    gcc 743506_ED2_T02.c -o main -g -Wall && ./teste.sh 7
+    tput reset && gcc 743506_ED2_T02.c -o main -g -Wall && ./main < teste.in

@@ -99,8 +99,8 @@ typedef struct nodeis
 
 typedef struct
 {
+	Chave_ip chave_promovida;
 	int rrn_novo_no;
-	char chave_promovida[TAM_PRIMARY_KEY];
 } Btree_ip_insert_return;
 
 typedef struct {
@@ -192,6 +192,9 @@ node_Btree_is *read_btree_is(int rrn);
 * É conveniente que essa função também inicialize os campos necessários com valores nulos*/
 node_Btree_ip *criar_no_ip();
 node_Btree_is *criar_no_is();
+
+void destruir_no_ip(node_Btree_ip *no);
+void destruir_no_is(node_Btree_is *no);
 
 Btree_ip_insert_return *divide_no(int rrn_X, int rrn_filho_direito, char * p);
 Btree_ip_insert_return *insere_aux_btree_ip(int rrn, char * p);
@@ -315,7 +318,7 @@ node_Btree_ip *criar_no_ip() {
 	no_ip->num_chaves = 0;
 	no_ip->chave = (Chave_ip *) malloc ((ordem_ip - 1) * sizeof(Chave_ip));
 
-	no_ip->desc = (int *) malloc ((ordem_ip) * sizeof(int));
+	no_ip->desc = malloc ((ordem_ip) * sizeof(int));
 	for (int i = 0; i < ordem_ip; i++) {
 		no_ip->desc[i] = -1;
 	}
@@ -327,15 +330,27 @@ node_Btree_ip *criar_no_ip() {
 node_Btree_is *criar_no_is() {
 	node_Btree_is *no_is = (node_Btree_is *) malloc (sizeof(node_Btree_is));
 	no_is->num_chaves = 0;
-	no_is->chave = (Chave_is *) malloc ((ordem_is - 1) * sizeof(Chave_is));
+	no_is->chave = (Chave_is *) calloc ((ordem_is - 1) * sizeof(Chave_is));
 
-	no_is->desc = (int *) malloc ((ordem_is) * sizeof(int));
+	no_is->desc = (int *) calloc ((ordem_is) * sizeof(int));
 	for (int i = 0; i < ordem_is; i++) {
 		no_is->desc[i] = -1;
 	}
 
 	no_is->folha = 'N';
 	return no_is;
+}
+
+void destruir_no_ip(node_Btree_ip *no) {
+	free(no->chave);
+	free(no->desc);
+	free(no);
+}
+
+void destruir_no_is(node_Btree_is *no) {
+	free(no->chave);
+	free(no->desc);
+	free(no);
 }
 
 Btree_ip_insert_return *divide_no(int rrn_X, int rrn_filho_direito, char * k) {
@@ -347,14 +362,15 @@ Btree_ip_insert_return *divide_no(int rrn_X, int rrn_filho_direito, char * k) {
 	Y->folha = X->folha;
 	Y->num_chaves = floor((ordem_ip - 1)/2);
 
-	for(int j = Y->num_chaves ; j >= 0 ; j--) {
+	for(int j = Y->num_chaves - 1 ; j >= 0 ; j--) {
 		if(!chave_alocada && (strcmp(k, X->chave[i].pk) > 0)) {
 			strncpy(Y->chave[j].pk, k, TAM_PRIMARY_KEY);
+			Y->chave[j].rrn = nregistros;
 			Y->desc[j + 1] = rrn_filho_direito;
 			chave_alocada = 1;
 		} else {
-			strncpy(Y->chave[j].pk, X->chave[j].pk, TAM_PRIMARY_KEY);
-			Y->chave[j].rrn = X->chave[j].rrn;
+			strncpy(Y->chave[j].pk, X->chave[i].pk, TAM_PRIMARY_KEY);
+			Y->chave[j].rrn = X->chave[i].rrn;
 			Y->desc[j + 1] = X->desc[i + 1];
 			i--;
 		}
@@ -371,20 +387,25 @@ Btree_ip_insert_return *divide_no(int rrn_X, int rrn_filho_direito, char * k) {
 		X->desc[i + 2] = rrn_filho_direito;
 	}
 
-	char chave_promovida[TAM_PRIMARY_KEY];
+	Chave_ip chave_promovida;
 	int aux = floor(ordem_ip/2);
-	strncpy(chave_promovida, X->chave[aux + 1].pk, TAM_PRIMARY_KEY);
-	Y->desc[0] = X->desc[aux + 2];
+	strncpy(chave_promovida.pk, X->chave[aux].pk, TAM_PRIMARY_KEY);
+	chave_promovida.rrn = X->chave[aux].rrn;
+	Y->desc[0] = X->desc[aux + 1];
 	X->num_chaves = aux;
 
 	write_btree_ip(Y, nregistrosip);
+	write_btree_ip(X, rrn_X);
 
 	Btree_ip_insert_return *ret = (Btree_ip_insert_return *) malloc(sizeof(Btree_ip_insert_return));
+	strncpy(ret->chave_promovida.pk, chave_promovida.pk, TAM_PRIMARY_KEY);
+	ret->chave_promovida.rrn = chave_promovida.rrn;
 	ret->rrn_novo_no = nregistrosip;
-	strncpy(ret->chave_promovida, chave_promovida, TAM_PRIMARY_KEY);
 	nregistrosip++;
-	free(X);
-	free(Y);
+
+	destruir_no_ip(X);
+	destruir_no_ip(Y);
+
 	return ret;
 }
 
@@ -402,24 +423,27 @@ Btree_ip_insert_return *insere_aux_btree_ip(int rrn, char * k) {
 			X->chave[i].rrn = nregistros;
 			X->num_chaves++;
 			write_btree_ip(X, rrn);
-			free(X);
+			destruir_no_ip(X);
 			return NULL;
 		} else {
-			free(X);
+			destruir_no_ip(X);
 			return divide_no(rrn, -1, k);
 		}
 	} else {
 		int i = X->num_chaves;
-		while(i >= 0 && (strcmp(k, X->chave[i].pk) < 0)) {
+		while(i > 0 && (strcmp(k, X->chave[i].pk) < 0)) {
 			i--;
 		}
-		i++;
 
 		Btree_ip_insert_return *ret = insere_aux_btree_ip(X->desc[i], k);
 
 		if(ret != NULL) {
 			int filho_direito = ret->rrn_novo_no;
-			char *promovida = ret->chave_promovida;
+			char *promovida = ret->chave_promovida.pk;
+			int rrn_ret = ret->chave_promovida.rrn;
+
+			free(ret);
+
 			strncpy(k, promovida, TAM_PRIMARY_KEY);
 			if( X->num_chaves < (ordem_ip - 1)) {
 				int i = X->num_chaves;
@@ -432,14 +456,13 @@ Btree_ip_insert_return *insere_aux_btree_ip(int rrn, char * k) {
 				strncpy(X->chave[i + 1].pk, k, TAM_PRIMARY_KEY);
 				X->desc[i + 2] = filho_direito;
 
-				free(X);
-				free(ret);
+				destruir_no_ip(X);
 				return NULL;
 			} else {
 				return divide_no(rrn, filho_direito, k);
 			}
 		} else {
-			free(X);
+			destruir_no_ip(X);
 			free(ret);
 			return NULL;
 		}
@@ -466,22 +489,26 @@ void insere_btree_ip(Indice *iprimary, char * k) {
 
 		if(ret != NULL) {
 			int filho_direito = ret->rrn_novo_no;
-			char *chave_promovida = ret->chave_promovida;
+			char *chave_promovida = ret->chave_promovida.pk;
+			int rrn = ret->chave_promovida.rrn;
 
 			node_Btree_ip *novo = criar_no_ip();
 			novo->folha = 'N';
 			novo->num_chaves = 1;
 			strncpy(novo->chave[0].pk, chave_promovida, TAM_PRIMARY_KEY);
-			novo->chave[0].rrn = nregistros;
+			novo->chave[0].rrn = rrn;
 
 			novo->desc[0] = iprimary->raiz;
 			novo->desc[1] = filho_direito;
 
 			write_btree_ip(novo, nregistrosip);
-			free(novo);
+			destruir_no_ip(novo);
+			free(chave_promovida);
+			free(ret);
 			iprimary->raiz = nregistrosip;
 			nregistrosip++;
 		}
+		free(ret);
 	}
 }
 
@@ -684,7 +711,6 @@ void inserir_arquivo(Produto *p) {
 
 void inserir_registro_indices(Indice *iprimary, Indice *ibrand, Produto j) {
 	insere_btree_ip(iprimary, j.pk);
-	nregistrosip++;
 }
 
 /* Recebe do usuário uma string simulando o arquivo completo e retorna o número

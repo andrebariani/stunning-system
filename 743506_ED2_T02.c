@@ -97,17 +97,17 @@ typedef struct nodeis
 	char folha;			/* flag folha da arvore*/
 } node_Btree_is;
 
-/* Estruturas auxiliares para insercao em arvore-B */
+/* Estruturas auxiliares para inserção em arvore-B */
 typedef struct
 {
-	Chave_ip chave_promovida;	// chave promovida em caso de divisao de no
-	int rrn_novo_no;			// rrn do novo no alocado
+	Chave_ip chave_promovida;	// chave promovida em caso de divisão de no
+	int rrn_novo_no;			// rrn do novo nó alocado
 } Btree_ip_insert_return;
 
 typedef struct
 {
-	Chave_is chave_promovida;	// chave promovida em caso de divisao de no
-	int rrn_novo_no;			// rrn do novo no alocado
+	Chave_is chave_promovida;	// chave promovida em caso de divisão de no
+	int rrn_novo_no;			// rrn do novo nó alocado
 } Btree_is_insert_return;
 
 typedef struct {
@@ -163,28 +163,8 @@ void criar_iprimary(Indice *iprimary);
 /* (Re)faz o índice de produtos  */
 void criar_ibrand(Indice *ibrand);
 
-// /*Escreve um nó da árvore no arquivo de índice,
-// * O terceiro parametro serve para informar qual indice se trata */
-// void write_btree(void *salvar, int rrn, char ip);
-//
-// /*Lê um nó do arquivo de índice e retorna na estrutura*/
-// void *read_btree(int rrn, char ip);
-//
-// /* Aloca um nó de árvore para ser utilizado em memória primária, o primeiro parametro serve para informar que árvore se trata
-// * É conveniente que essa função também inicialize os campos necessários com valores nulos*/
-// void *criar_no(char ip);
-//
-// /*Libera todos os campos dinâmicos do nó, inclusive ele mesmo*/
-// void libera_no(void *node, char ip);
-
 /*
-*   Caro aluno,
-*   caso não queira trabalhar com void*, é permitido dividir as funções que utilizam
-* em duas, sendo uma para cada índice...
-* Um exemplo, a write_btree e read_btree ficariam como:
-*
-*   void write_btree_ip(node_Btree_ip *salvar, int rrn),  node_Btree_ip *read_btree_ip(int rrn),
-*   void write_btree_is(node_Btree_is *salvar, int rrn) e node_Btree_is *read_btree_is(int rrn).
+*	Neste presente trabalho, foram feitas funções para atender cada tipo de chave
 */
 
 /*Escreve um nó da árvore no arquivo de índice*/
@@ -200,22 +180,26 @@ node_Btree_is *read_btree_is(int rrn);
 node_Btree_ip *criar_no_ip();
 node_Btree_is *criar_no_is();
 
-/* Funcoes de insercao em arvore-B */
+/* Funções de inserção em arvore-B para índice primario */
 Btree_ip_insert_return *divide_no_ip(int rrn_X, int rrn_filho_direito, Chave_ip chave_nova);
 Btree_ip_insert_return *insere_aux_btree_ip(int rrn, Chave_ip chave_nova);
 void insere_btree_ip(Indice *iprimary, Chave_ip chave_nova);
 
+/* Funções de inserção em arvore-B para índice secundário */
 Btree_is_insert_return *divide_no_is(int rrn_X, int rrn_filho_direito, Chave_is chave_nova);
 Btree_is_insert_return *insere_aux_btree_is(int rrn, Chave_is chave_nova);
 void insere_btree_is(Indice *ibrand, Chave_is chave_nova);
 
-/* Funcoes de busca em arvore-B, o ultimo parametro "print" e um booleano para ativar os prints
+/* Funções de busca em arvore-B, o último parametro "print" é um booleano para ativar os prints
 	dos nos do caminho percorrido */
 int busca_no_ip(int rrn, char * k, int print);
 int busca_no_is(Indice iprimary, int rrn, char * k, int print);
 
-/* Percurso pre-ordem em uma arvore-B que faz os prints dos nos percorridos*/
+/* Percurso pré-ordem em uma arvore-B que faz os prints dos nós percorridos*/
 void pre_order_ip(int rrn, int nivel);
+
+/* Percurso em-ordem em uma arvore-B que faz os prints dos nós percorridos*/
+void in_order_is(int rrn);
 
 /*Libera todos os campos dinâmicos do nó, inclusive ele mesmo*/
 void libera_no_ip(node_Btree_ip *no);
@@ -308,6 +292,7 @@ int main()
 			break;
 		}
 	}
+
 	return -1;
 }
 
@@ -328,10 +313,11 @@ void criar_iprimary(Indice *iprimary) {
 
 	 nregistros = 0;
 
+	 /* Vai inserindo cada registro do arquivo na árvore-B */
 	 for(int i = 0 ; i < nregistrostotal ; i++) {
-		 Produto p = recuperar_registro(i);
+		Produto p = recuperar_registro(i);
 
-		 Chave_ip ip;
+		Chave_ip ip;
 
 	 	ip.rrn = nregistros;
 	 	strncpy(ip.pk, p.pk, TAM_PRIMARY_KEY);
@@ -351,9 +337,11 @@ void criar_ibrand(Indice *ibrand) {
 
 	ibrand->raiz = -1;
 
+	/* Vai inserindo cada registro do arquivo na árvore-B */
 	for(int i = 0 ; i < nregistros ; i++) {
 		Produto p = recuperar_registro(i);
 
+		/* Prepara chave secundária para inserção em árvore-B */
 		Chave_is is;
 		strncpy(is.pk, p.pk, TAM_PRIMARY_KEY);
 		char temp[TAM_STRING_INDICE];
@@ -366,7 +354,6 @@ void criar_ibrand(Indice *ibrand) {
 		strncpy(is.string, temp, TAM_STRING_INDICE);
 
 		insere_btree_is(ibrand, is);
-
 	}
 }
 
@@ -450,7 +437,7 @@ Btree_ip_insert_return *divide_no_ip(int rrn_X, int rrn_filho_direito, Chave_ip 
 		X->desc[i + 2] = rrn_filho_direito;
 	}
 
-	/* Escolhe a menor chave em Y para promoção */
+	/* Prepara chave para promoção */
 	Chave_ip chave_promovida;
 	int aux = floor(ordem_ip/2);
 	strncpy(chave_promovida.pk, X->chave[aux].pk, TAM_PRIMARY_KEY);
@@ -533,11 +520,12 @@ Btree_ip_insert_return *insere_aux_btree_ip(int rrn, Chave_ip chave_nova) {
 				free(ret);
 				return NULL;
 			} else {
+				/* Se não couber em X, divide ele */
 				libera_no_ip(X);
 				free(ret);
 				return divide_no_ip(rrn, rrn_filho_direito, chave_nova);
 			}
-		} else {
+		} else { /* Se há chave promovida, prossiga */
 			libera_no_ip(X);
 			free(ret);
 			return NULL;
@@ -633,7 +621,7 @@ Btree_is_insert_return *divide_no_is(int rrn_X, int rrn_filho_direito, Chave_is 
 		X->desc[i + 2] = rrn_filho_direito;
 	}
 
-	/* Escolhe a menor chave em Y para promoção */
+	/* Prepara chave para promoção */
 	Chave_is chave_promovida;
 	int aux = floor(ordem_is/2);
 	strncpy(chave_promovida.pk, X->chave[aux].pk, TAM_PRIMARY_KEY);
@@ -715,7 +703,7 @@ Btree_is_insert_return *insere_aux_btree_is(int rrn, Chave_is chave_nova) {
 				libera_no_is(X);
 				free(ret);
 				return NULL;
-			} else {
+			} else { /* Se não couber em X, divide X */
 				libera_no_is(X);
 				free(ret);
 				return divide_no_is(rrn, rrn_filho_direito, chave_nova);
@@ -777,9 +765,10 @@ void insere_btree_is(Indice *ibrand, Chave_is chave_nova) {
 }
 
 void write_btree_ip(node_Btree_ip *salvar, int rrn) {
+	/* Prepara temp para ser o registro que será inserido no arquivo de índice */
 	char temp[tamanho_registro_ip];
 
-	// Desalocação de temp só por segurança
+	// Desalocação de temp
 	for(int i = 0 ; i < tamanho_registro_ip ; i++)
 		temp[i] = '\0';
 
@@ -817,15 +806,16 @@ void write_btree_ip(node_Btree_ip *salvar, int rrn) {
 	temp[tamanho_registro_ip] = '\0';
 	strncpy(ARQUIVO_IP + (rrn)*tamanho_registro_ip, temp, tamanho_registro_ip);
 
-	// Desalocação de temp só por segurança
+	// Desalocação de temp
 	for(int i = 0 ; i < tamanho_registro_ip ; i++)
 		temp[i] = '\0';
 }
 
 void write_btree_is(node_Btree_is *salvar, int rrn) {
+	/* Prepara temp para ser o registro que será inserido no arquivo de índice */
 	char temp[tamanho_registro_is];
 
-	// Desalocação de temp só por segurança
+	// Desalocação de temp
 	for(int i = 0 ; i < tamanho_registro_is ; i++)
 		temp[i] = '\0';
 
@@ -849,11 +839,9 @@ void write_btree_is(node_Btree_is *salvar, int rrn) {
 		} else {
 			int j = 111;
 			while(j) {
-				// printf("%d ", j);
 				strcat(temp, "#");
 				j--;
 			}
-			// printf("\n");
 		}
 	}
 
@@ -874,7 +862,7 @@ void write_btree_is(node_Btree_is *salvar, int rrn) {
 	temp[tamanho_registro_is] = '\0';
 	strncpy(ARQUIVO_IS + (rrn)*tamanho_registro_is, temp, tamanho_registro_is);
 
-	// Desalocação de temp só por segurança
+	// Desalocação de temp
 	for(int i = 0 ; i < tamanho_registro_is ; i++)
 		temp[i] = '\0';
 }
@@ -883,6 +871,7 @@ node_Btree_ip *read_btree_ip(int rrn) {
 	if(rrn == -1)
 		return NULL;
 
+	/* Leitura do registro no arquivo de índice para salvar em temp */
 	char temp[tamanho_registro_ip], aux[14];
 	strncpy(temp, ARQUIVO_IP + (rrn)*tamanho_registro_ip, tamanho_registro_ip);
 	temp[tamanho_registro_ip] = '\0';
@@ -921,6 +910,7 @@ node_Btree_is *read_btree_is(int rrn) {
 	if(rrn == -1)
 		return NULL;
 
+	/* Leitura do registro no arquivo de índice para salvar em temp */
 	char temp[tamanho_registro_is], aux[14];
 	strncpy(temp, ARQUIVO_IS + (rrn)*tamanho_registro_is, tamanho_registro_is);
 	temp[tamanho_registro_is] = '\0';
@@ -959,12 +949,11 @@ node_Btree_is *read_btree_is(int rrn) {
 }
 
 int busca_no_ip(int rrn, char * k, int print) {
-	int i = 0;
-	int first = 1;
-
 	if(rrn == -1) {
 		return -1;
 	}
+	int i = 0;
+	int first = 1;
 
 	node_Btree_ip * no_atual = read_btree_ip(rrn);
 
@@ -984,7 +973,7 @@ int busca_no_ip(int rrn, char * k, int print) {
 		}
 	}
 
-	if(i <= no_atual->num_chaves && strcmp(k, no_atual->chave[i].pk) == 0) {
+	if(i < no_atual->num_chaves && strcmp(k, no_atual->chave[i].pk) == 0) {
 		if(print)
 			printf("\n");
 		int aux = no_atual->chave[i].rrn;
@@ -1012,8 +1001,10 @@ void pre_order_ip(int rrn, int nivel) {
 
 	int i = 0;
 	int first = 1;
+
 	node_Btree_ip * no_atual = read_btree_ip(rrn);
 	printf("%d - ", nivel);
+
 	while(i < no_atual->num_chaves) {
 		if(first) {
 			printf("%s", no_atual->chave[i].pk);
@@ -1098,7 +1089,9 @@ void in_order_is(int rrn) {
 		char marca[TAM_MARCA];
 		char nome[TAM_NOME];
 		char *p;
+
 		temp[0] = '\0';
+
 		in_order_is(no_atual->desc[i]);
 
 		strncpy(aux, no_atual->chave[i].string, TAM_STRING_INDICE);
@@ -1161,27 +1154,36 @@ void cadastrar(Indice* iprimary, Indice* ibrand) {
 }
 
 int alterar(Indice iprimary) {
-	if(nregistros) {
-		char pk_alt[TAM_PRIMARY_KEY];
+	char pk_alt[TAM_PRIMARY_KEY];
 
-		scanf("%[^\n]%*c", pk_alt);
+	scanf("%[^\n]%*c", pk_alt);
 
-		int found = busca_no_ip(iprimary.raiz, pk_alt, 0);
+	int found = busca_no_ip(iprimary.raiz, pk_alt, 0);
 
-		if(found != -1) { /* Se chave foi encontrada */
-			/* Código reaproveitado do T01 */
-			char desconto[4];
-			int valido = 0;
+	if(found != -1) { /* Se chave foi encontrada */
+		/* Código reaproveitado e modificado do T01 */
+		char desconto[4];
+		int valido = 0;
 
-			while (!valido) {
-				scanf("%[^\n]%*c", desconto);
+		while (!valido) {
+			scanf("%[^\n]%*c", desconto);
 
-				/* Pre-processando a entrada */
-				if(strlen(desconto) == 3) {
+			/* Pre-processando a entrada */
+			if(strlen(desconto) == 3) {
+				desconto[3] = '\0';
+
+				/* Checando se desconto contem apenas numeros */
+				int j = 0;
+				int contem_letra = 0;
+				while(j < 3) {
+					if(isdigit(desconto[j]) == 0) {
+						contem_letra = 1;
+					}
+					j++;
+				}
+				if(!contem_letra) {
 					int d = atoi(desconto);
 					if(d <= 100 && d >= 0) {
-						valido = 1;
-
 						char temp[193];
 						strncpy(temp, ARQUIVO + ((found)*192), 192);
 						temp[192] = '\0';
@@ -1199,37 +1201,36 @@ int alterar(Indice iprimary) {
 								break;
 							}
 						}
+
 						/* Altera Arquivo de Dados */
 						ARQUIVO[((found)*192) + pos] = desconto[0];
 						ARQUIVO[((found)*192) + pos+1] = desconto[1];
 						ARQUIVO[((found)*192) + pos+2] = desconto[2];
+						return 1;
 					} else {
 						printf(CAMPO_INVALIDO);
 					}
 				} else {
 					printf(CAMPO_INVALIDO);
 				}
+			} else {
+				printf(CAMPO_INVALIDO);
 			}
-		} else {
-			printf(REGISTRO_N_ENCONTRADO);
-			return 0;
 		}
 	} else {
-		printf(ARQUIVO_VAZIO);
+		printf(REGISTRO_N_ENCONTRADO);
 		return 0;
 	}
+	printf(REGISTRO_N_ENCONTRADO);
+	return 0;
 }
 
 void buscar(Indice iprimary,Indice ibrand) {
-	if(!nregistros) {
-		printf(ARQUIVO_VAZIO);
-		return;
-	}
-
 	int opcao;
 	char pk[TAM_PRIMARY_KEY];
 	char aux[TAM_STRING_INDICE];
 	char busca_aux[TAM_STRING_INDICE];
+
 	aux[0] = '\0';
 	busca_aux[0] = '\0';
 
@@ -1271,22 +1272,27 @@ void buscar(Indice iprimary,Indice ibrand) {
 			printf(REGISTRO_N_ENCONTRADO);
 		}
 	}
-	return;
 }
 
 void listar(Indice iprimary,Indice ibrand) {
-	if(!nregistros) {
-		printf(ARQUIVO_VAZIO);
-		return;
-	}
 	int opcao;
 
    	scanf("%d%*c", &opcao);
 
    	if(opcao == 1) {
+		if(!nregistros) {
+			printf(REGISTRO_N_ENCONTRADO);
+			return;
+		}
+
 	   	pre_order_ip(iprimary.raiz, 1);
 		printf("\n");
    	} else if(opcao == 2) {
+		if(!nregistros) {
+			printf(REGISTRO_N_ENCONTRADO);
+			return;
+		}
+
 		in_order_is(ibrand.raiz);
    	}
 }

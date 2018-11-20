@@ -351,27 +351,23 @@ void criar_ibrand(Indice *ibrand) {
 
 	ibrand->raiz = -1;
 
-	// int nregistrostotal = nregistros;
-	//
-	// nregistros = 0;
-	//
-	// for(int i = 0 ; i < nregistrostotal ; i++) {
-	// 	Produto p = recuperar_registro(i);
-	//
-	// 	Chave_is is;
-	// 	strncpy(is.pk, p.pk, TAM_PRIMARY_KEY);
-	// 	char temp[TAM_STRING_INDICE];
-	//
-	// 	strcat(temp, p.marca);
-	// 	strcat(temp, "$");
-	// 	strcat(temp, p.nome);
-	// 	temp[strlen(p.marca) + strlen(j.nome) + 1] = '\0';
-	// 	strncpy(is.string, temp, TAM_STRING_INDICE);
-	//
-	// 	insere_btree_is(ibrand, is);
-	//
-	// 	nregistros++;
-	// }
+	for(int i = 0 ; i < nregistros ; i++) {
+		Produto p = recuperar_registro(i);
+
+		Chave_is is;
+		strncpy(is.pk, p.pk, TAM_PRIMARY_KEY);
+		char temp[TAM_STRING_INDICE];
+		temp[0] = '\0';
+
+		strcat(temp, p.marca);
+		strcat(temp, "$");
+		strcat(temp, p.nome);
+		temp[strlen(p.marca) + strlen(p.nome) + 1] = '\0';
+		strncpy(is.string, temp, TAM_STRING_INDICE);
+
+		insere_btree_is(ibrand, is);
+
+	}
 }
 
 node_Btree_ip *criar_no_ip() {
@@ -450,7 +446,7 @@ Btree_ip_insert_return *divide_no_ip(int rrn_X, int rrn_filho_direito, Chave_ip 
 			i--;
 		}
 		strncpy(X->chave[i + 1].pk, chave_nova.pk, TAM_PRIMARY_KEY);
-		X->chave[i + 1].rrn = nregistros;
+		X->chave[i + 1].rrn = chave_nova.rrn;
 		X->desc[i + 2] = rrn_filho_direito;
 	}
 
@@ -639,7 +635,7 @@ Btree_is_insert_return *divide_no_is(int rrn_X, int rrn_filho_direito, Chave_is 
 
 	/* Escolhe a menor chave em Y para promoção */
 	Chave_is chave_promovida;
-	int aux = floor(ordem_ip/2);
+	int aux = floor(ordem_is/2);
 	strncpy(chave_promovida.pk, X->chave[aux].pk, TAM_PRIMARY_KEY);
 	strncpy(chave_promovida.string, X->chave[aux].string, TAM_STRING_INDICE);
 	Y->desc[0] = X->desc[aux + 1];
@@ -701,7 +697,7 @@ Btree_is_insert_return *insere_aux_btree_is(int rrn, Chave_is chave_nova) {
 			strncpy(chave_nova.string, ret->chave_promovida.string, TAM_STRING_INDICE);
 			int rrn_filho_direito = ret->rrn_novo_no;
 
-			if( X->num_chaves < (ordem_ip - 1)) {
+			if( X->num_chaves < (ordem_is - 1)) {
 				int i = X->num_chaves - 1;
 				while(i >= 0 && (strcmp(chave_nova.string, X->chave[i].string) < 0)) {
 					strncpy(X->chave[i + 1].pk, X->chave[i].pk, TAM_PRIMARY_KEY);
@@ -1165,7 +1161,63 @@ void cadastrar(Indice* iprimary, Indice* ibrand) {
 }
 
 int alterar(Indice iprimary) {
-	 return 0;
+	if(nregistros) {
+		char pk_alt[TAM_PRIMARY_KEY];
+
+		scanf("%[^\n]%*c", pk_alt);
+
+		int found = busca_no_ip(iprimary.raiz, pk_alt, 0);
+
+		if(found != -1) { /* Se chave foi encontrada */
+			/* Código reaproveitado do T01 */
+			char desconto[4];
+			int valido = 0;
+
+			while (!valido) {
+				scanf("%[^\n]%*c", desconto);
+
+				/* Pre-processando a entrada */
+				if(strlen(desconto) == 3) {
+					int d = atoi(desconto);
+					if(d <= 100 && d >= 0) {
+						valido = 1;
+
+						char temp[193];
+						strncpy(temp, ARQUIVO + ((found)*192), 192);
+						temp[192] = '\0';
+						int size = strlen(temp);
+						int pos = 0;
+
+						/* Procura posicao do campo desconto */
+						int arroba = 0;
+						for(int i = 0 ; i < size ; i++) {
+							if(temp[i] == '@') {
+								arroba++;
+							}
+							if(arroba == 6) {
+								pos = i + 1;
+								break;
+							}
+						}
+						/* Altera Arquivo de Dados */
+						ARQUIVO[((found)*192) + pos] = desconto[0];
+						ARQUIVO[((found)*192) + pos+1] = desconto[1];
+						ARQUIVO[((found)*192) + pos+2] = desconto[2];
+					} else {
+						printf(CAMPO_INVALIDO);
+					}
+				} else {
+					printf(CAMPO_INVALIDO);
+				}
+			}
+		} else {
+			printf(REGISTRO_N_ENCONTRADO);
+			return 0;
+		}
+	} else {
+		printf(ARQUIVO_VAZIO);
+		return 0;
+	}
 }
 
 void buscar(Indice iprimary,Indice ibrand) {
@@ -1197,7 +1249,7 @@ void buscar(Indice iprimary,Indice ibrand) {
 		else {
 			printf(REGISTRO_N_ENCONTRADO);
 		}
-	} else {
+	} else if(opcao == 2) {
 		scanf("%[^\n]%*c", aux);
 		strcat(busca_aux, aux);
 
@@ -1228,12 +1280,13 @@ void listar(Indice iprimary,Indice ibrand) {
 		return;
 	}
 	int opcao;
+
    	scanf("%d%*c", &opcao);
 
    	if(opcao == 1) {
 	   	pre_order_ip(iprimary.raiz, 1);
 		printf("\n");
-   	} else {
+   	} else if(opcao == 2) {
 		in_order_is(ibrand.raiz);
    	}
 }
